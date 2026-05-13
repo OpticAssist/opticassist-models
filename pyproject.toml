@@ -1,0 +1,8 @@
+[project]
+name = "opticassist-models"
+dependencies = [
+    "requests>=2.0.0",
+    "numpy",
+    "tensorflow",
+    "matplotlib",
+]
