@@ -1,31 +1,23 @@
 import sys
-from typing import Literal
-
-
-# Prints error output to be collected in Rust
-def eprint(*values: object, sep: str | None = " ",
-           end: str | None = "\n",
-           flush: Literal[False] = False):
-    print(*values, sep=sep, end=end, flush=flush, file=sys.stderr)
-
-
-def main():
 import base64
-import torch
+import cv2
+import numpy as np
 from ultralytics import YOLO
-import sys
+import json
+
+def main(img_base64: str):
+    try:
+        decoded_bytes = base64.b64decode(img_base64)
+
+        np_arr = np.frombuffer(decoded_bytes, dtype=np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        model = YOLO("yolov8s-cls.pt")
+
+        results = model(img)
 
 
-
-def main(img):
-    print("hello, world!")
-    decoded_bytes = base64.b64decode(img)
-    model = YOLO("yolo26n.pt")
-    results = model.train(data="img",epochs=3)
-    print(decoded_bytes)
 
 if __name__ == '__main__':
-    if(len(sys.argv)>1):
+    if len(sys.argv) > 1:
         main(sys.argv[1])
-    else:
-        ...
