@@ -14,7 +14,7 @@ def eprint(*values: object, sep: str | None = " ",
     print(*values, sep=sep, end=end, flush=flush, file=sys.stderr)
 
 # Convert a YOLO result to a JSON object
-def prediction_json(model_output: list[Results]) -> str:
+def prediction_json(model_output: list[Results], np_img) -> str:
     frame_output = model_output[0]
     raw_predictions: list[dict] = []
     boxes = frame_output.boxes
@@ -23,10 +23,24 @@ def prediction_json(model_output: list[Results]) -> str:
         label = frame_output.names[label_id]
         confidence = float(box.conf[0])
         x1, y1, x2, y2 = box.xyxy[0].tolist()
+
+        # converts the floats into integers
+        ix1, iy1, ix2, iy2 = int(x1), int(y1), int(x2), int(y2)
+
+        # crops the image to just get the object using the bounding box
+        cropped_object = np_img[iy1:iy2, ix1:ix2]
+
+        # converts the object from bgr to rgb cause cv2 has reverse order, if there's no object it returns no color
+        if cropped_object.size > 0:
+            bgr_avg = cv2.mean(cropped_object)[:3]
+            rgb_color = [round(bgr_avg[2]), round(bgr_avg[1]), round(bgr_avg[0])]
+        else:
+            rgb_color = [0, 0, 0]
         raw_predictions.append({
             "label": label,
             "confidence": confidence,
             "bounding_box": [x1, y1, x2, y2],
+            "average_rgb": rgb_color,
         })
     output = {
         "kind": "output",
