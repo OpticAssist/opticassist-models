@@ -268,3 +268,6 @@ cython_debug/
 
 # MacOS
 .DS_Store
+
+# PyTorch Binary
+*.pt

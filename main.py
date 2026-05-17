@@ -16,14 +16,14 @@ def eprint(*values: object, sep: str | None = " ",
 # Convert a YOLO result to a JSON object
 def prediction_json(model_output: list[Results]) -> str:
     frame_output = model_output[0]
-    detections: list[dict] = []
+    raw_predictions: list[dict] = []
     boxes = frame_output.boxes
     for box in boxes:
         label_id = int(box.cls[0])
         label = frame_output.names[label_id]
         confidence = float(box.conf[0])
         x1, y1, x2, y2 = box.xyxy[0].tolist()
-        detections.append({
+        raw_predictions.append({
             "label": label,
             "confidence": confidence,
             "bounding_box": [x1, y1, x2, y2],
@@ -31,7 +31,7 @@ def prediction_json(model_output: list[Results]) -> str:
     output = {
         "kind": "output",
         "image_shape": list(frame_output.orig_shape),
-        "detections": detections
+        "raw_predictions": raw_predictions
     }
 
     return json.dumps(output)
