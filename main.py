@@ -40,7 +40,7 @@ def prediction_json(model_output: list[Results], np_img) -> str:
             "label": label,
             "confidence": confidence,
             "bounding_box": [x1, y1, x2, y2],
-            "average_rgb": rgb_color,
+            "raw_rgb": rgb_color,
         })
     output = {
         "kind": "output",
