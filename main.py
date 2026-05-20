@@ -64,7 +64,7 @@ def main(img):
     results_arr = model.predict(np_img)
 
     # send JSON results to stdout
-    print(prediction_json(results_arr), flush=True)
+    print(prediction_json(results_arr, np_img), flush=True)
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
