@@ -67,7 +67,7 @@ def prediction_json(model_output: list[Results], np_img) -> str:
             bgr_avg = cv2.mean(cropped_object)[:3]
             rgb_color =  dominant_color(cropped_object)
         else:
-            rgb_color = "white"
+            rgb_color = (0,0,0)
 
         color_name = closest_color_name(rgb_color)
 
@@ -75,7 +75,7 @@ def prediction_json(model_output: list[Results], np_img) -> str:
             "label": label,
             "confidence": confidence,
             "bounding_box": [x1, y1, x2, y2],
-            "raw_rgb": color_name,
+            "color": color_name,
         })
 
     output = {
