@@ -49,7 +49,7 @@ def prediction_json(model_output: list[Results], np_img) -> str:
             "average_rgb": rgb_color,
         })
     output = {
-        "kind": "output",
+        "kind": "raw_output",
         "image_shape": list(frame_output.orig_shape),
         "raw_predictions": raw_predictions
     }
