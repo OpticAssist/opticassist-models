@@ -9,6 +9,8 @@ from ultralytics.engine.results import Results
 import webcolors
 from sklearn.cluster import KMeans
 
+
+# Prints error output to be collected in Rust
 def eprint(*values: object, sep: str | None = " ",
            end: str | None = "\n",
            flush: Literal[False] = False):
@@ -78,6 +80,10 @@ def prediction_json(model_output: list[Results], np_img) -> str:
         ix1, iy1, ix2, iy2 = int(x1), int(y1), int(x2), int(y2)
         # cropped_object = np_img[int(iy1*1.3):int(iy2//1.3), int(ix1*1.3):int(ix2//1.3)]
         cropped_object = np_img[iy1:iy2, ix1:ix2]
+        # cropped_object_color = np_img[iy1*2:iy2//2, ix1*2:ix2//2]
+        cropped_object_color = np_img[iy1:iy2, ix1:ix2]
+
+
 
 
         if cropped_object.size > 0:
@@ -94,7 +100,7 @@ def prediction_json(model_output: list[Results], np_img) -> str:
         })
 
     output = {
-        "kind": "output",
+        "kind": "raw_output",
         "image_shape": list(frame_output.orig_shape),
         "raw_predictions": raw_predictions
     }
