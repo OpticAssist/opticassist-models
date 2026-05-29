@@ -5,4 +5,6 @@ dependencies = [
     "requests>=2.0.0",
     "ultralytics",
     "numpy",
+    "webcolors",
+    "scikit-learn"
 ]

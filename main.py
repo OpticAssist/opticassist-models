@@ -1,21 +1,58 @@
 import sys
 import json
-from typing import Literal
 import base64
+from json import JSONDecodeError
 import numpy as np
 import cv2
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
-import webcolors
 from sklearn.cluster import KMeans
+from abc import ABC
+from dataclasses import dataclass, asdict
+
+sys.stdout.reconfigure(line_buffering=True) # Removes the need for `flush = True` with every print
+
+@dataclass(slots=True, kw_only=True)
+class Message(ABC):
+    kind: str
+
+    def to_dict(self):
+        return asdict(self)
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
+
+    def __str__(self) -> str:
+        return self.to_json()
+
+@dataclass(slots=True, kw_only=True)
+class Status(Message):
+    message: str
+    kind: str = "status"
+
+@dataclass(slots=True, kw_only=True)
+class Input(Message):
+    image: str
+    kind: str = "input"
+
+@dataclass(slots=True, kw_only=True)
+class Error(Message):
+    message: str
+    kind: str = "error"
+
+@dataclass(slots=True, kw_only=True)
+class RawPrediction:
+    label: str
+    confidence: float
+    bounding_box: list[int]
+    color: str
 
 
-# Prints error output to be collected in Rust
-def eprint(*values: object, sep: str | None = " ",
-           end: str | None = "\n",
-           flush: Literal[False] = False):
-    print(*values, sep=sep, end=end, flush=flush, file=sys.stderr)
-
+@dataclass(slots=True, kw_only=True)
+class RawOutput(Message):
+    image_shape: list[int]
+    raw_predictions: list[RawPrediction]
+    kind: str = "raw_output"
 
 def hsv_to_color_name(hsv_pixel):
     h, s, v = hsv_pixel
@@ -39,9 +76,7 @@ def hsv_to_color_name(hsv_pixel):
         return "purple"
     return "pink"
 
-
-
-# uses KMeans cluster. Basically, the image is cropped to 1/4 - 3/4 to center it.
+# Uses KMeans cluster. Basically, the image is cropped to 1/4 -- 3/4 to center it.
 # Then, km basically looks at all the pixels and sorts them to a color group that it fits.
 # For example, the image can be 40% Yellow and 60% Green so instead of giving a greenish-yellow,
 # it just says green. Makes it more accurate.
@@ -63,13 +98,11 @@ def dominant_color(cropped):
 
     color_name = hsv_to_color_name(dominant_hsv)
 
-
-
     return color_name
 
 def prediction_json(model_output: list[Results], np_img) -> str:
     frame_output = model_output[0]
-    raw_predictions: list[dict] = []
+    raw_predictions: list[RawPrediction] = []
     boxes = frame_output.boxes
     for box in boxes:
         label_id = int(box.cls[0])
@@ -78,36 +111,27 @@ def prediction_json(model_output: list[Results], np_img) -> str:
         x1, y1, x2, y2 = box.xyxy[0].tolist()
 
         ix1, iy1, ix2, iy2 = int(x1), int(y1), int(x2), int(y2)
-        # cropped_object = np_img[int(iy1*1.3):int(iy2//1.3), int(ix1*1.3):int(ix2//1.3)]
+
+        bounding_box = [ix1, iy1, ix2, iy2]
         cropped_object = np_img[iy1:iy2, ix1:ix2]
-        # cropped_object_color = np_img[iy1*2:iy2//2, ix1*2:ix2//2]
-        cropped_object_color = np_img[iy1:iy2, ix1:ix2]
-
-
-
 
         if cropped_object.size > 0:
-            bgr_avg = cv2.mean(cropped_object)[:3]
+            # bgr_avg = cv2.mean(cropped_object)[:3]
             color=  dominant_color(cropped_object)
         else:
             color = "unknown"
 
-        raw_predictions.append({
-            "label": label,
-            "confidence": confidence,
-            "bounding_box": [x1, y1, x2, y2],
-            "color": color,
-        })
+        raw_predictions.append(RawPrediction(label=label, confidence=confidence, bounding_box=bounding_box, color=color))
 
-    output = {
-        "kind": "raw_output",
-        "image_shape": list(frame_output.orig_shape),
-        "raw_predictions": raw_predictions
-    }
-    return json.dumps(output)
+    image_shape = list(frame_output.orig_shape)
+    output = RawOutput(image_shape=image_shape, raw_predictions=raw_predictions)
 
+    return str(output)
 
-def main(img):
+model = YOLO("yolo26n.pt", verbose=False)
+print(Status(message="200 OK"))
+
+def main(img: str):
 
     # convert image into correct np array format
     decoded_bytes = base64.b64decode(img)
@@ -115,30 +139,33 @@ def main(img):
     np_arr = np.frombuffer(decoded_bytes, np.uint8)
     np_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-    # start the model
-    model = YOLO("yolo26n.pt")
-
-
     # get results
-    results_arr = model.predict(np_img)
+    results_arr = model.predict(np_img, verbose=False)
 
     # send JSON results to stdout
-    print(prediction_json(results_arr, np_img), flush=True)
+    print(prediction_json(results_arr, np_img))
 
 if __name__ == '__main__':
-    ready = {
-        "kind": "status",
-        "message": "200 OK"
-    }
-    print(ready, flush=True)
-    if sys.argv[1]== "run":
+    if len(sys.argv) > 1 and sys.argv[1] == "test":
         arg = sys.stdin.readline()
         main(arg)
-    elif len(sys.argv) > 1:
-        eprint("You shouldn't start the model with arguments.")
+        sys.exit(0)
     while True:
         arg = sys.stdin.readline()
         if arg.strip() != "":
-            main(arg)
-
-
+            try:
+                data = json.loads(arg)
+            except JSONDecodeError as e:
+                print(Error(message=f"Failed to decode JSON, skipping the frame: {e}"))
+                continue
+            obj_kind = data.get("kind")
+            match obj_kind:
+                case "status":
+                    status = Status(message=data.get("message"))
+                    if status.message == "exit":
+                        sys.exit(0)
+                    else:
+                        print(Error(message=f"Unrecognized status message: {status.message}"))
+                case "input":
+                    model_input = Input(image=data.get("image"))
+                    main(model_input.image)
