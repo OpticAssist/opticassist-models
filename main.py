@@ -168,4 +168,8 @@ if __name__ == '__main__':
                         print(Error(message=f"Unrecognized status message: {status.message}"))
                 case "input":
                     model_input = Input(image=data.get("image"))
-                    main(model_input.image)
+                    try:
+                        main(model_input.image)
+                    except Exception as e:
+                        print(Error(message=f"Model crashed while running, skipping the frame: {e}"))
+                        continue
