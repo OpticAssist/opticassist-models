@@ -62,7 +62,7 @@ def hsv_to_color_name(hsv_pixel):
         return "white" if v > 180 else "gray"
     if h < 15 or h >= 165:
         return "red"
-    if h < 30:
+    if h < 25:
         return "orange"
     if h < 45:
         return "yellow"
