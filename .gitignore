@@ -228,7 +228,7 @@ celerybeat.pid
 
 # Environments
 .env
-.venv
+.venv*
 env/
 venv/
 ENV/
@@ -271,3 +271,6 @@ cython_debug/
 
 # PyTorch Binary
 *.pt
+
+# Onnx Model File
+*.onnx

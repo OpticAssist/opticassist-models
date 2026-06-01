@@ -9,7 +9,9 @@ from ultralytics.engine.results import Results
 from sklearn.cluster import KMeans
 from abc import ABC
 from dataclasses import dataclass, asdict
+import logging
 
+logging.disable(logging.CRITICAL)
 sys.stdout.reconfigure(line_buffering=True) # Removes the need for `flush = True` with every print
 
 @dataclass(slots=True, kw_only=True)
@@ -128,7 +130,7 @@ def prediction_json(model_output: list[Results], np_img) -> str:
 
     return str(output)
 
-model = YOLO("yolo26n.pt", verbose=False)
+model = YOLO("yolo26n.onnx", task="detect", verbose=False)
 print(Status(message="200 OK"))
 
 def main(img: str):
@@ -148,7 +150,10 @@ def main(img: str):
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         arg = sys.stdin.readline()
-        main(arg)
+        try:
+            main(arg)
+        except Exception as e:
+            print(Error(message=f"Model crashed while running, skipping the frame: {e}"))
         sys.exit(0)
     while True:
         arg = sys.stdin.readline()
