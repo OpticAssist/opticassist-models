@@ -1,10 +1,12 @@
 [project]
 name = "opticassist-models"
 version = "0.1.0"
+requires-python = ">= 3.10"
 dependencies = [
-    "requests>=2.0.0",
-    "ultralytics",
-    "numpy",
-    "webcolors",
-    "scikit-learn"
+    "requests >= 2.0.0",
+    "ultralytics >= 8.4.56",
+    "numpy >= 2.4.6",
+    "scikit-learn >= 1.8.0",
+    "onnx == 1.21.0",
+    "onnxruntime == 1.26.0"
 ]
